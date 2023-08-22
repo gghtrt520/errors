@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	unknownCoder defaultCoder = defaultCoder{1, http.StatusInternalServerError, "An internal server error occurred", "http://github.com/gghtrt520/errors/README.md"}
+	unknownCoder defaultCoder = defaultCoder{1, http.StatusInternalServerError, "An internal server error occurred", "An internal server error occurred"}
 )
 
 // Coder defines an interface for an error code detail information.
@@ -32,11 +32,11 @@ type defaultCoder struct {
 	// HTTP status that should be used for the associated error code.
 	HTTP int
 
-	// External (user) facing error text.
-	Ext string
+	// Deafult error text.
+	Message string
 
-	// Ref specify the reference document.
-	Ref string
+	// User error text.
+	Ext string
 }
 
 // Code returns the integer code of the coder.
@@ -48,7 +48,7 @@ func (coder defaultCoder) Code() int {
 // String implements stringer. String returns the external error message,
 // if any.
 func (coder defaultCoder) String() string {
-	return coder.Ext
+	return coder.Message
 }
 
 // HTTPStatus returns the associated HTTP status code, if any. Otherwise,
@@ -63,7 +63,7 @@ func (coder defaultCoder) HTTPStatus() int {
 
 // Reference returns the reference document.
 func (coder defaultCoder) Reference() string {
-	return coder.Ref
+	return coder.Ext
 }
 
 // codes contains a map of error codes to metadata.
@@ -109,8 +109,17 @@ func ParseCoder(err error) Coder {
 	}
 
 	if v, ok := err.(*withCode); ok {
-		if coder, ok := codes[v.code]; ok {
-			return coder
+		if _, ok := codes[v.code]; ok {
+			if v.err == nil {
+				return codes[v.code]
+			} else {
+				return defaultCoder{
+					C:       v.code,
+					HTTP:    codes[v.code].HTTPStatus(),
+					Message: codes[v.code].String(),
+					Ext:     v.Error(),
+				}
+			}
 		}
 	}
 
